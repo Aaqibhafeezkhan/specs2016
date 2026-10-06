@@ -38,24 +38,22 @@ def get_the_version(doPrint):
 			sys.stdout.write("Yes, going with that.")
 		return gittag
 	
-	# Get the version from manpage
-	with open("../../manpage", "r") as manpage:
-		foundVersion = False
-		rdline = "XXX"
-		while (False == foundVersion) & (rdline != ''):
-			rdline = manpage.readline().strip()
-			line = rdline.split(' ')
-			if line[0] == '.TH':
-				if (line[1]!='man') | (line[7]!='"specs'):
-					sys.stderr.write("\nMalformed .TH line: Second word is {}; Eighth is {}\n".format(line[1], line[7]))
-					exit(-4)
-				manpage_version = line[6].strip('"')
-				if doPrint:
-					sys.stdout.write("Found version <{}> in manpage...".format(manpage_version))
-				foundVersion = True
-		if False == foundVersion:
-			sys.stderr.write("\nMalformed manpage file: no .TH line found\n")
-			exit(-4)
+	manpage_version = os.environ.get("SPECS_VERSION", "").strip()
+	if manpage_version.startswith("v"):
+		manpage_version = manpage_version[1:]
+	if manpage_version == "":
+		try:
+			manpage_version = subprocess.check_output(
+				["git", "describe", "--tags", "--abbrev=0"],
+				stderr=subprocess.DEVNULL
+			).decode().strip()
+		except Exception:
+			manpage_version = ""
+	if manpage_version.startswith("v"):
+		manpage_version = manpage_version[1:]
+	if manpage_version == "":
+		sys.stderr.write("\nCould not determine the base version from SPECS_VERSION or git tags\n")
+		exit(-4)
 
 	if gittag == "dev":
 		if doPrint:
